@@ -1,11 +1,45 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { StatsCard } from "@/components/StatsCard";
 import { SpendingChart } from "@/components/SpendingChart";
 import { TransactionList } from "@/components/TransactionList";
 import { SavingsGoals } from "@/components/SavingsGoals";
 import { ChallengeCard } from "@/components/ChallengeCard";
 import { WalletIcon, TrendingUpIcon, TrendingDownIcon, TargetIcon } from "lucide-react";
+import { Session } from "@supabase/supabase-js";
 
 const Index = () => {
+  const [session, setSession] = useState<Session | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (!session) {
+        navigate("/auth");
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      if (!session) {
+        navigate("/auth");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  if (!session) {
+    return null;
+  }
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -23,8 +57,11 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">Your money, simplified</p>
               </div>
             </div>
-            <button className="px-4 py-2 rounded-lg bg-gradient-primary text-primary-foreground font-semibold hover:opacity-90 transition-opacity">
-              Connect Bank
+            <button 
+              onClick={handleSignOut}
+              className="px-4 py-2 rounded-lg bg-gradient-primary text-primary-foreground font-semibold hover:opacity-90 transition-opacity"
+            >
+              Sign Out
             </button>
           </div>
         </div>
